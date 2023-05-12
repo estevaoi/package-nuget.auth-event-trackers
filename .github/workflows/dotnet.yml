@@ -14,12 +14,12 @@ jobs:
         with:
           dotnet-version: 5.0.x
       - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Geração do pacote
         run: |
           cd src
-          dotnet build -c Release -o out
+          dotnet restore
+
+      - name: Geração do pacote
+        run: dotnet build -c Release -o out
 
       - name: Push no NuGet
         run: |
