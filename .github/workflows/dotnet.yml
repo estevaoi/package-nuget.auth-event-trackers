@@ -19,9 +19,11 @@ jobs:
           dotnet restore
 
       - name: Geração do pacote
-        run: dotnet build -c Release -o out
+        run: |
+          cd src
+          dotnet build -c Release -o out
 
       - name: Push no NuGet
         run: |
-          cd out
+          cd src/out
           dotnet nuget push *.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/estevaoi/index.json" --skip-duplicate
