@@ -1,7 +1,8 @@
 ﻿namespace AuthEventTrackers.Domains.Entities
 {
-    internal class QueueEntity
+    public class QueueEntity
     {
-        public string QueueLoggers { get; set; } = "LoggersApplications";
+        public string Key { get; set; }
+        public string Name { get; set; }
     }
 }

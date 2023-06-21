@@ -16,7 +16,7 @@ namespace AuthEventTrackers.Infra
             _httpClient = httpClient;
         }
 
-        public async Task<List<ProfileModuleEntity>> GetAsyncProfilesModulues( string token)
+        public List<ProfileModuleEntity> GetAsyncProfilesModulues( string token)
         {
             string requestUri = Environment.GetEnvironmentVariable("URL_BASE_PROFILES_MODULES");
 
@@ -26,16 +26,16 @@ namespace AuthEventTrackers.Infra
 
             try
             {
-                var response = await _httpClient.SendAsync(httpRequestMessage);
-                var content  = await response.Content.ReadAsStringAsync();
+                var response =  _httpClient.Send(httpRequestMessage);
+                //var content  =  response.Content.Re;
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return JsonConvert.DeserializeObject<List<ProfileModuleEntity>>(content);
+                    return JsonConvert.DeserializeObject<List<ProfileModuleEntity>>("");
                 }
                 else
                 {
-                    throw new Exception(content);
+                    throw new Exception("");
                 }
             }
             catch (Exception)

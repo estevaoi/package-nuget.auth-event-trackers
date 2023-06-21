@@ -1,6 +1,6 @@
 ﻿namespace AuthEventTrackers.Domains.Entities
 {
-    internal class LogFlagsEntity
+    public class LogFlagsEntity
     {
         public bool? Error   { get; set; }
         public bool? Info    { get; set; }

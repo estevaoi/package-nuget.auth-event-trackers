@@ -1,71 +1,75 @@
-﻿using AuthEventTrackers.Domains.Entities;
-using AuthEventTrackers.Domains.Response;
-using Newtonsoft.Json;
-using System;
+﻿using AuthEventTrackers.Domains.Response;
 using System.Globalization;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace AuthEventTrackers
 {
-    public class LoggerClient
+    public static class LoggerClient
     {
-        private readonly string       _aplicationName = Environment.GetEnvironmentVariable("APPLICATION_NAME");
-        private readonly RabbitEntity _configRabbit   = JsonConvert.DeserializeObject<RabbitEntity>(Environment.GetEnvironmentVariable("MQ_RABBITMQ_GERAL") ?? "");
+        private static readonly string _aplicationName = Environment.GetEnvironmentVariable("APPLICATION_NAME");
 
-        private void SetLog(
+        private static void SetLog(
             string type,
             string category,
             AuthorizationResponse authorization,
-            string sourceFilePath   = "",
-            string memberName       = "",
-            int    sourceLineNumber = 0,
-            string tags             = null,
-            object request          = null,
-            object response         = null,
-            object exception        = null,
-            object codeNumber       = null)
+            string sourceFilePath = "",
+            string memberName = "",
+            int sourceLineNumber = 0,
+            string tags = null,
+            object request = null,
+            object response = null,
+            object exception = null,
+            object codeNumber = null)
         {
-            var date            = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            var date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
             var memberClassName = Path.GetFileNameWithoutExtension(sourceFilePath);
-            var tagSplit        = tags?.Split(",");
+            var tagSplit = tags?.Split(",");
 
             var json = new
             {
-                AplicacaoNome   = _aplicationName,
-                Type            = type,
-                Category        = category,
-                Date            = date,
-                Source          = new
-                {               
-                    ClassName   = memberClassName,
-                    MethodName  = memberName,
-                    LineNumber  = sourceLineNumber
-                },              
-                Authorization   = authorization,
-                Tags            = tagSplit,
-                                
-                CodeNumber      = codeNumber,
-                                
-                Request         = request,
-                Response        = response,
-                Exception       = exception
+                AplicacaoNome = _aplicationName,
+                Type = type,
+                Category = category,
+                Date = date,
+                Source = new
+                {
+                    ClassName = memberClassName,
+                    MethodName = memberName,
+                    LineNumber = sourceLineNumber
+                },
+                Authorization = authorization,
+                Tags = tagSplit,
+
+                CodeNumber = codeNumber,
+
+                Request = request,
+                Response = response,
+                Exception = exception
             };
 
-            RabbitClient.SendMessage(json, _configRabbit.Queue.QueueLoggers);
+            try
+            {
+                RabbitClient.SendMessage(json, RabbitClient.GetQueueRabbit("queueLoggers"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw new Exception("Erro ao converter as configurações do Rabbit");
+            }
+
         }
 
-        public void Info(
-            string                    category,
-            AuthorizationResponse     authorization,
-            [CallerFilePath] string   sourceFilePath   = "",
-            [CallerMemberName] string memberName       = "",
-            [CallerLineNumber] int    sourceLineNumber = 0,
-            string                    tags             = null,
-            object                    request          = null,
-            object                    response         = null,
-            object                    exception        = null,
-            object                    codeNumber       = null
+        public static void Info(
+            string category,
+            AuthorizationResponse authorization,
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerMemberName] string memberName = "",
+            [CallerLineNumber] int sourceLineNumber = 0,
+            string tags = null,
+            object request = null,
+            object response = null,
+            object exception = null,
+            object codeNumber = null
         ) => SetLog("INFO",
                     category,
                     authorization,
@@ -79,17 +83,17 @@ namespace AuthEventTrackers
                     codeNumber
             );
 
-        public void Success(
-            string                    category,
-            AuthorizationResponse     authorization,
-            [CallerFilePath] string   sourceFilePath   = "",
-            [CallerMemberName] string memberName       = "",
-            [CallerLineNumber] int    sourceLineNumber = 0,
-            string                    tags             = null,
-            object                    request          = null,
-            object                    response         = null,
-            object                    exception        = null,
-            object                    codeNumber       = null
+        public static void Success(
+            string category,
+            AuthorizationResponse authorization,
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerMemberName] string memberName = "",
+            [CallerLineNumber] int sourceLineNumber = 0,
+            string tags = null,
+            object request = null,
+            object response = null,
+            object exception = null,
+            object codeNumber = null
         ) => SetLog("SUCCESS",
                     category,
                     authorization,
@@ -103,17 +107,17 @@ namespace AuthEventTrackers
                     codeNumber
             );
 
-        public void Error(
-            string                    category,
-            AuthorizationResponse     authorization,
-            [CallerFilePath] string   sourceFilePath   = "",
-            [CallerMemberName] string memberName       = "",
-            [CallerLineNumber] int    sourceLineNumber = 0,
-            string                    tags             = null,
-            object                    request          = null,
-            object                    response         = null,
-            object                    exception        = null,
-            object                    codeNumber       = null
+        public static void Error(
+            string category,
+            AuthorizationResponse authorization,
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerMemberName] string memberName = "",
+            [CallerLineNumber] int sourceLineNumber = 0,
+            string tags = null,
+            object request = null,
+            object response = null,
+            object exception = null,
+            object codeNumber = null
         ) => SetLog("ERROR",
                     category,
                     authorization,
@@ -127,17 +131,17 @@ namespace AuthEventTrackers
                     codeNumber
             );
 
-        public void Warning(
-            string                    category,
-            AuthorizationResponse     authorization,
-            [CallerFilePath] string   sourceFilePath   = "",
-            [CallerMemberName] string memberName       = "",
-            [CallerLineNumber] int    sourceLineNumber = 0,
-            string                    tags             = null,
-            object                    request          = null,
-            object                    response         = null,
-            object                    exception        = null,
-            object                    codeNumber       = null
+        public static void Warning(
+            string category,
+            AuthorizationResponse authorization,
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerMemberName] string memberName = "",
+            [CallerLineNumber] int sourceLineNumber = 0,
+            string tags = null,
+            object request = null,
+            object response = null,
+            object exception = null,
+            object codeNumber = null
         ) => SetLog("WARNING",
                     category,
                     authorization,

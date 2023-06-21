@@ -4,32 +4,26 @@ using AuthEventTrackers.Infra;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace AuthEventTrackers
 {
     public class AuthorizationClient
     {
-        private HttpRequest           _httpRequest;
-        private List<Claim>           _userClaims = new List<Claim>();
+        private List<Claim>           _userClaims  = new List<Claim>();
         private string                _tokenAccess = "";
+        private string                _cacheName   = "AllProfilesModules";
+        private HttpRequest           _httpRequest;
 
         private readonly IMemoryCache _memoryCache;
         private readonly HttpClient   _httpClient;
-        private readonly string       _cacheName = "AllProfilesModules";
-        private readonly LoggerClient _log       = new LoggerClient();
 
-        public AuthorizationClient(IMemoryCache memoryCache, HttpClient httpClient)
+        public AuthorizationClient(IMemoryCache memoryCache, 
+                                   HttpClient   httpClient)
         {
-            _memoryCache = memoryCache;
-            _httpClient = httpClient;
+            _httpClient  = httpClient;
+            _memoryCache = memoryCache;            
         }
 
         private string GetHeader(string key)
@@ -38,7 +32,7 @@ namespace AuthEventTrackers
             return value;
         }
 
-        private Guid GetCorrelationId()
+        public Guid GetCorrelationId()
         {
             if (Guid.TryParse(GetHeader("X-Correlation-Id"), out Guid correlationId))
             {
@@ -50,15 +44,17 @@ namespace AuthEventTrackers
             }
         }
 
-        private async Task<ProfileModuleEntity> GetProfileModule(string moduleCode, List<Guid> profileId)
+        private ProfileModuleEntity GetProfileModule(string moduleCode, List<Guid> profileId)
         {
-            if (!_memoryCache.TryGetValue(_cacheName, out List<ProfileModuleEntity> list))
-            {
-                var httpClient = new HttpClientApi(_httpClient);
+            var list = new List<ProfileModuleEntity>();
 
-                list = await httpClient.GetAsyncProfilesModulues(_tokenAccess);
-                _memoryCache.Set(_cacheName, list, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
-            }
+            //if (!_memoryCache.TryGetValue(_cacheName, out List<ProfileModuleEntity> list))
+            //{
+                //var httpClient = new HttpClientApi(_httpClient);
+
+                //list =  httpClient.GetAsyncProfilesModulues(_tokenAccess);
+                //_memoryCache.Set(_cacheName, list, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
+            //}
 
             return list.FirstOrDefault(x => x.ModuleCode == moduleCode && profileId.Contains(x.ProfileId));
         }
@@ -117,21 +113,23 @@ namespace AuthEventTrackers
             _memoryCache.Remove(_cacheName);
         }
 
-        public async Task<AuthorizationResponse> Authorization(
-            ClaimsPrincipal         user,
-            HttpRequest             httpRequest,
-            bool                    flagPermissao  = true,
-            [CallerFilePath] string sourceFilePath = "")
+        public AuthorizationResponse Authorization(HttpRequest httpRequest, ClaimsPrincipal user)
         {
-            _httpRequest        = httpRequest;
-            _userClaims         = user.Claims.ToList();
-            _tokenAccess        = GetHeader("Authorization");
+            _httpRequest = httpRequest;
+            _userClaims = user.Claims.ToList();
+            _tokenAccess = GetHeader("Authorization");
 
-            var method          = httpRequest.Method;
-            var module          = Path.GetFileNameWithoutExtension(sourceFilePath).Replace("Controller", "");
+            var routes = (((dynamic)_httpRequest).RouteValues as IReadOnlyDictionary<string, object>).Values.ToList();
+
+            var metodo = routes[0];
+            var module = routes[1].ToString().Replace("Controller", "");
+
+            var method          = _httpRequest.Method;
+
             var profilesId      = GetClaimListGuid("Perfis");
-            var profileModule   = await GetProfileModule(module, profilesId);
+            var profileModule   = GetProfileModule(module, profilesId);
             var isAccessAllowed = HasMethodAccess(profileModule, method);
+
 
             var authorizationResponse = new AuthorizationResponse
             {
@@ -145,15 +143,9 @@ namespace AuthEventTrackers
                 Method          = method
             };
 
-            if (profileModule == null && flagPermissao)
+            if (!isAccessAllowed && profileModule != null)
             {
-                _log.Warning("access", authorizationResponse, response: $"The module {method}/{module} is not associated with any user profile.");
-                throw new UnauthorizedAccessException();
-            }
-
-            if (!isAccessAllowed && flagPermissao)
-            {
-                _log.Warning("access", authorizationResponse, response: $"None of the user's profiles have permission to access module {method}/{module}.");
+                LoggerClient.Warning("access", authorizationResponse, response: $"None of the user's profiles have permission to access module {method}/{module}.");
                 throw new UnauthorizedAccessException();
             }
 
