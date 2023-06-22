@@ -29,15 +29,7 @@ namespace AuthEventTrackers
             {
                 var messageBody = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
-                var factory = new ConnectionFactory
-                {
-                    HostName = rabbitConfig.Connection.HostName,
-                    Port = rabbitConfig.Connection.Port,
-                    UserName = rabbitConfig.Connection.UserName,
-                    Password = rabbitConfig.Connection.Password,
-                };
-
-                using var connection = factory.CreateConnection();
+                using var connection = rabbitConfig.Connection.CreateConnection();
                 using var channel = connection.CreateModel();
 
                 channel.BasicPublish(

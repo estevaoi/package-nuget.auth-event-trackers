@@ -1,10 +1,8 @@
 ﻿using AuthEventTrackers.Domains.Entities;
 using AuthEventTrackers.Domains.Response;
-using AuthEventTrackers.Infra;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
 namespace AuthEventTrackers
