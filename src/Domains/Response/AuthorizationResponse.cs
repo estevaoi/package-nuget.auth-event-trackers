@@ -6,6 +6,14 @@ namespace AuthEventTrackers.Domains.Response
 {
     public class AuthorizationResponse
     {
+        private readonly Guid _correlationId;
+        public AuthorizationResponse(Guid correlationId)
+        {
+            _correlationId = correlationId;
+        }
+
+        public AuthorizationResponse() { }
+
         public Guid             CorrelationId    { get; set; }
         public Guid             PersonId         { get; set; }
         public Guid             UserId           { get; set; }
