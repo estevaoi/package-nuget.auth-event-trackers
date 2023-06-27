@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 
 		<PackageId>Auth.Event.Tracker</PackageId>
-		<Version>1.0.0</Version>
+		<Version>1.1.0</Version>
 		<Authors>Estêvão Silva</Authors>
 		<Company>PBOX</Company>
 		<RepositoryUrl>https://github.com/estevaoi/package-nuget.auth-event-trackers</RepositoryUrl>
@@ -19,6 +19,7 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
+		<PackageReference Include="RestSharp" Version="110.2.0" />
 	</ItemGroup>
 
 	<ItemGroup>

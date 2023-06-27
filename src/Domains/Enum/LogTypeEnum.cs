@@ -1,6 +1,6 @@
 ﻿namespace AuthEventTrackers.Domains.Enum
 {
-    internal enum LogFlagsEnum
+    public enum LogTypeEnum
     {
         SUCCESS,
         INFO,

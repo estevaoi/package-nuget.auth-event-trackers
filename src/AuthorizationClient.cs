@@ -1,5 +1,7 @@
 ﻿using AuthEventTrackers.Domains.Entities;
+using AuthEventTrackers.Domains.Enum;
 using AuthEventTrackers.Domains.Response;
+using AuthEventTrackers.Infra;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
@@ -15,24 +17,18 @@ namespace AuthEventTrackers
         private HttpRequest           _httpRequest;
 
         private readonly IMemoryCache _memoryCache;
-        private readonly HttpClient   _httpClient;
 
-        public AuthorizationClient(IMemoryCache memoryCache, 
-                                   HttpClient   httpClient)
+        #region Private methods 
+
+        private string GetHeaderValue(string headerKey)
         {
-            _httpClient  = httpClient;
-            _memoryCache = memoryCache;            
+            _httpRequest.Headers.TryGetValue(headerKey, out var headerValue);
+            return headerValue;
         }
 
-        private string GetHeader(string key)
+        private Guid GetCorrelationId()
         {
-            _httpRequest.Headers.TryGetValue(key, out var value);
-            return value;
-        }
-
-        public Guid GetCorrelationId()
-        {
-            if (Guid.TryParse(GetHeader("X-Correlation-Id"), out Guid correlationId))
+            if (Guid.TryParse(GetHeaderValue("X-Correlation-Id"), out Guid correlationId))
             {
                 return correlationId;
             }
@@ -42,49 +38,34 @@ namespace AuthEventTrackers
             }
         }
 
+        private Guid GetClaimGuid(string type)
+        {
+            var claim = _userClaims.FirstOrDefault(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase));
+            return claim != null && Guid.TryParse(claim.Value, out Guid claimGuid) ? claimGuid : Guid.Empty;
+        }
+
         private ProfileModuleEntity GetProfileModule(string moduleCode, List<Guid> profileId)
         {
-            var list = new List<ProfileModuleEntity>();
-
-            //if (!_memoryCache.TryGetValue(_cacheName, out List<ProfileModuleEntity> list))
-            //{
-                //var httpClient = new HttpClientApi(_httpClient);
-
-                //list =  httpClient.GetAsyncProfilesModulues(_tokenAccess);
-                //_memoryCache.Set(_cacheName, list, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
-            //}
+            if (!_memoryCache.TryGetValue(_cacheName, out List<ProfileModuleEntity> list))
+            {
+                list = new ProfilesModulesServices().GetProfilesModulues(_tokenAccess);
+                _memoryCache.Set(_cacheName, list, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
+            }
 
             return list.FirstOrDefault(x => x.ModuleCode == moduleCode && profileId.Contains(x.ProfileId));
         }
 
         private bool HasMethodAccess(ProfileModuleEntity entity, string method)
         {
-            if (entity == null) return false;
-
-            switch (method.ToUpperInvariant())
+            return (method ?? "").ToUpperInvariant() switch
             {
-                case "GET":
-                    return entity.Get;
-
-                case "POST":
-                    return entity.Post;
-
-                case "PUT":
-                case "PATCH":
-                    return entity.Put;
-
-                case "DELETE":
-                    return entity.Delete;
-
-                default:
-                    return false;
-            }
-        }
-
-        private Guid GetClaimGuid(string type)
-        {
-            var claim = _userClaims.FirstOrDefault(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase));
-            return claim != null && Guid.TryParse(claim.Value, out Guid claimGuid) ? claimGuid : Guid.Empty;
+                "GET"    => entity.Get,
+                "POST"   => entity.Post,
+                "PUT"    => entity.Put,
+                "PATCH"  => entity.Put,
+                "DELETE" => entity.Delete,
+                _        => false
+            };
         }
 
         private List<Guid> GetClaimListGuid(string type)
@@ -106,6 +87,13 @@ namespace AuthEventTrackers
             return new List<Guid>();
         }
 
+        #endregion
+
+        public AuthorizationClient(IMemoryCache memoryCache)
+        {
+            _memoryCache = memoryCache;            
+        }              
+
         public void DestroyCache()
         {
             _memoryCache.Remove(_cacheName);
@@ -113,21 +101,20 @@ namespace AuthEventTrackers
 
         public AuthorizationResponse Authorization(HttpRequest httpRequest, ClaimsPrincipal user)
         {
-            _httpRequest = httpRequest;
-            _userClaims = user.Claims.ToList();
-            _tokenAccess = GetHeader("Authorization");
+            _httpRequest        = httpRequest;
+            _userClaims         = user.Claims.ToList();
+            _tokenAccess        = GetHeaderValue("Authorization");
 
-            var routes = (((dynamic)_httpRequest).RouteValues as IReadOnlyDictionary<string, object>).Values.ToList();
-
-            var metodo = routes[0];
-            var module = routes[1].ToString().Replace("Controller", "");
+            var routes          = (((dynamic)_httpRequest).RouteValues as IReadOnlyDictionary<string, object>).Values.ToList();
+                                
+            var metodo          = routes[0];
+            var module          = routes[1].ToString().Replace("Controller", "");
 
             var method          = _httpRequest.Method;
 
             var profilesId      = GetClaimListGuid("Perfis");
             var profileModule   = GetProfileModule(module, profilesId);
             var isAccessAllowed = HasMethodAccess(profileModule, method);
-
 
             var authorizationResponse = new AuthorizationResponse
             {
@@ -143,7 +130,7 @@ namespace AuthEventTrackers
 
             if (!isAccessAllowed && profileModule != null)
             {
-                LoggerClient.Warning("access", authorizationResponse, response: $"None of the user's profiles have permission to access module {method}/{module}.");
+                LoggerClient.Log(LogTypeEnum.WARNIG, GetCorrelationId(), authorization: authorizationResponse, response: $"None of the user's profiles have permission to access module {method}/{module}.");
                 throw new UnauthorizedAccessException();
             }
 
