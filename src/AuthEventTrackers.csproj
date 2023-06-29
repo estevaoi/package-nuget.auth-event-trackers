@@ -6,15 +6,19 @@
 		<Nullable>enable</Nullable>
 
 		<PackageId>Auth.Event.Tracker</PackageId>
-		<Version>1.1.0</Version>
+		<Version>1.1.4</Version>
 		<Authors>Estêvão Silva</Authors>
 		<Company>PBOX</Company>
 		<RepositoryUrl>https://github.com/estevaoi/package-nuget.auth-event-trackers</RepositoryUrl>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="..\LICENSE.txt" Pack="true" PackagePath="" />
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -24,6 +28,10 @@
 
 	<ItemGroup>
 	  <Folder Include="out\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\.editorconfig" Link=".editorconfig" />
 	</ItemGroup>
 
 </Project>

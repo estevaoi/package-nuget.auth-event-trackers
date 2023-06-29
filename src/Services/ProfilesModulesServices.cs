@@ -26,10 +26,17 @@ namespace AuthEventTrackers.Infra
                 {
                     request.AddParameter((string)item.Name, (string)item.Value);
                 }
-                
-                var response = client.Get<List<ProfileModuleEntity>>(request);
 
-                return response;
+                var response = client.ExecuteGet<List<ProfileModuleEntity>>(request);
+
+                if (!response.IsSuccessful)
+                {
+                    throw new Exception($"ERROR: {response.ErrorException?.Message}. Content: {response?.Content!}");
+                }
+
+                var data = JsonConvert.DeserializeObject<List<ProfileModuleEntity>>(response.Content!);
+
+                return data!;
 
             }
             catch (Exception)

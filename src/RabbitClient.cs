@@ -22,22 +22,19 @@ namespace AuthEventTrackers
         public static void SendMessage(object message, string routingKey)
         {
             var rabbitConfig = GetRabbitConfig();
-
             if (!rabbitConfig.IsEnable) return;
-
             try
             {
                 var messageBody = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
                 using var connection = rabbitConfig.Connection.CreateConnection();
                 using var channel = connection.CreateModel();
-
                 channel.BasicPublish(
                     exchange: rabbitConfig.Exchange,
                     routingKey: routingKey,
                     basicProperties: null,
                     body: messageBody
-                );
+                ); 
             }
             catch (Exception ex)
             {
